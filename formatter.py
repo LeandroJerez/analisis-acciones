@@ -1,87 +1,77 @@
-from openpyxl.chart import BarChart, Reference
 import openpyxl
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.chart import BarChart, Reference
+from openpyxl.styles import Alignment, Font, PatternFill, numbers
 from openpyxl.utils import get_column_letter
 
 
-def estilizar_excel(nombre_archivo):
-    wb = openpyxl.load_workbook(nombre_archivo)
+def formatear_excel(filename="rendimiento_acciones.xlsx"):
+    wb = openpyxl.load_workbook(filename)
     ws = wb.active
 
-    # Estilos
-    font_cabecera = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
-    fill_cabecera = PatternFill(
-        start_color="1F4E78", end_color="1F4E78", fill_type="solid"
-    )
-    borde_fino = Border(
-        left=Side(style="thin", color="D9D9D9"),
-        right=Side(style="thin", color="D9D9D9"),
-        top=Side(style="thin", color="D9D9D9"),
-        bottom=Side(style="thin", color="D9D9D9"),
-    )
-
-    # Aplicar estilos a la cabecera
-    for col in range(1, ws.max_column + 1):
-        cell = ws.cell(row=1, column=col)
-        cell.font = font_cabecera
-        cell.fill = fill_cabecera
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-
-    # Aplicar bordes y ajustar ancho de columnas automáticamente
-    for col in range(1, ws.max_column + 1):
-        col_letter = get_column_letter(col)
-        max_len = 0
-        for row in range(1, ws.max_row + 1):
-            cell = ws.cell(row=row, column=col)
-            cell.border = borde_fino
-            if row > 1:  # Datos
-                cell.alignment = Alignment(vertical="center")
-
-            if cell.value:
-                max_len = max(max_len, len(str(cell.value)))
-
+    # --- 1. Ajustar ancho de columnas automáticamente ---
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or "")) for cell in col)
+        col_letter = get_column_letter(col[0].column)
         ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
 
-    wb.save(nombre_archivo)
+    # --- 2. Dar estilo al encabezado ---
+    header_fill = PatternFill(
+        start_color="1F4E78", end_color="1F4E78", fill_type="solid"
+    )
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
 
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(
+            horizontal="center", vertical="center", wrap_text=True
+        )
 
-def agregar_grafico_barras(nombre_archivo):
-    wb = openpyxl.load_workbook(nombre_archivo)
-    ws = wb.active  # O ws = wb['NombreDeTuHoja']
+    ws.row_dimensions[1].height = 28
 
-    # 1. Crear la instancia del gráfico de barras
+    # --- 3. Formatear datos (filas 2 en adelante) ---
+    max_row = ws.max_row
+
+    for row in range(2, max_row + 1):
+        # Precios: Formato Moneda $ #,##0.00
+        ws[f"C{row}"].number_format = '"$"#,##0.00'
+        ws[f"D{row}"].number_format = '"$"#,##0.00'
+        ws[f"E{row}"].number_format = '"$"#,##0.00'
+
+        # Variación %: Formato Porcentaje +0.00%;-0.00%
+        var_cell = ws[f"F{row}"]
+        var_cell.number_format = "+0.00%;-0.00%"
+
+        # Color condicional según ganancia/pérdida
+        val = var_cell.value
+        if val is not None:
+            if val > 0:
+                var_cell.font = Font(color="008000", bold=True)  # Verde
+            elif val < 0:
+                var_cell.font = Font(color="FF0000", bold=True)  # Rojo
+
+    # --- 4. Configurar y agregar el gráfico correctamente ---
     chart = BarChart()
-    # 'col' para barras verticales (columnas) o 'bar' para horizontales
-    chart.type = "col"
-    chart.style = 10  # Estilo predefinido de diseño de Excel
-    chart.title = "Rendimiento de Acciones"
-    chart.y_axis.title = "Valor / Porcentaje"
+    chart.type = "col"  # Columnas verticales
+    chart.style = 10
+    chart.title = "Rendimiento Diario (%)"
+    chart.y_axis.title = "Variación (%)"
     chart.x_axis.title = "Acciones"
 
-    # 2. Definir los rangos de datos y las categorías (etiquetas del eje X)
-    # Asumiendo que:
-    # - Los datos numéricos están en la columna B (desde la fila 1 hasta la última)
-    # - Las categorías (nombres de las acciones) están en la columna A (desde la fila 2 hasta la última)
-    max_fila = ws.max_row
+    # Los datos están en la Columna F (Variación %), incluyendo el título en la fila 1
+    data = Reference(ws, min_col=6, min_row=1, max_row=max_row)
 
-    # Referencia para los datos (incluye el encabezado)
-    datos = Reference(
-        ws, min_col=2, min_row=1, max_col=2, max_row=max_fila
-    )  # Ajusta min_col según tu columna de valores
-    # Referencia para las etiquetas del eje X (excluyendo el encabezado, desde la fila 2)
-    categorias = Reference(
-        ws, min_col=1, min_row=2, max_col=1, max_row=max_fila
-    )  # Ajusta min_col según tu columna de nombres
+    # Las categorías (nombres de X) están en la Columna A (Tickers), filas 2 a max_row
+    cats = Reference(ws, min_col=1, min_row=2, max_row=max_row)
 
-    chart.add_data(datos, titles_from_data=True)
-    chart.set_categories(categorias)
+    chart.add_data(data, titles_from_data=True)
+    chart.set_categories(cats)
+    chart.legend = None  # No necesita leyenda si cada barra es un ticker en X
 
-    # 3. Opcional: ajustar el tamaño del gráfico
-    chart.height = 12
-    chart.width = 18
+    chart.width = 16
+    chart.height = 10
 
-    # 4. Insertar el gráfico en la hoja (por ejemplo, en la celda D2)
-    ws.add_chart(chart, "D2")
+    # Colocar el gráfico al lado de la tabla
+    ws.add_chart(chart, "H2")
 
-    # Guardar los cambios
-    wb.save(nombre_archivo)
+    wb.save(filename)
