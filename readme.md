@@ -58,8 +58,8 @@ Acciones/
 
 1. Clonar el Repositorio
 
-git clone https://github.com/TU_USUARIO/tu-repositorio.git
-cd tu-repositorio
+git clone https://github.com/LeandroJerez/analsis-acciones.git
+cd analisis-acciones
 
 2. Crear y Activar Entorno Virtual
 
