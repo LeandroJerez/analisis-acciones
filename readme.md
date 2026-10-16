@@ -58,7 +58,7 @@ Acciones/
 
 1. Clonar el Repositorio
 
-git clone https://github.com/LeandroJerez/analsis-acciones.git
+git clone https://github.com/LeandroJerez/analisis-acciones.git
 cd analisis-acciones
 
 2. Crear y Activar Entorno Virtual
