@@ -1,0 +1,53 @@
+name: Actualizar Planilla de Acciones
+
+on:
+  schedule:
+    - cron: "0 21 * * 1-5" # Se ejecuta de lunes a viernes a las 21:00 UTC
+  workflow_dispatch: # Permite ejecutarlo manualmente desde la pestaña Actions
+
+permissions:
+  contents: write # Otorga permisos para que el bot pueda modificar y subir archivos
+
+jobs:
+  run-python-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Descargar el repositorio actual en la máquina virtual de GitHub
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      # 2. Configurar la versión de Python
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      # 3. Instalar las dependencias listadas en requirements.txt
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 4. Ejecutar tu script principal de Python (genera el Excel con formato y gráficos)
+      - name: Ejecutar script de análisis de acciones
+        run: python main.py
+
+      # 5. Configurar la identidad del bot para los commits
+      - name: Configurar Git
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+
+      # 6. Agregar todos los cambios (incluyendo el Excel generado)
+      - name: Agregar archivos modificados
+        run: git add .
+
+      # 7. Guardar cambios localmente
+      - name: Guardar cambios localmente
+        run: git commit -m "Actualización automática de acciones [skip ci]" || echo "No hay cambios para confirmar"
+
+      # 8. Forzar la sincronización y subida para evitar bloqueos por el fetch first
+      - name: Forzar subida a GitHub
+        run: git push origin main --force
