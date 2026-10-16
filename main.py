@@ -20,10 +20,3 @@ def principal():
 
 if __name__ == "__main__":
     principal()
-
-# En tu main.py al final del proceso:
-
-# ... tu código que genera 'rendimiento_acciones.xlsx' ...
-
-# Llamas a la función para que aplique estilos y agregue el gráfico
-formatter.agregar_grafico_barras("rendimiento_acciones.xlsx")
