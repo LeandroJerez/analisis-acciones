@@ -1,4 +1,3 @@
-import formatter
 import openpyxl
 from extractor import obtener_datos_acciones
 
