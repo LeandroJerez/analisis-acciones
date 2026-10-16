@@ -31,8 +31,11 @@ jobs:
           pip install -r requirements.txt
 
       # 4. Ejecutar tu script principal de Python (genera el Excel con formato y gráficos)
+      # 4. Ejecutar tu script principal de Python con PYTHONPATH configurado
       - name: Ejecutar script de análisis de acciones
         run: python main.py
+        env:
+          PYTHONPATH: .
 
       # 5. Configurar la identidad del bot para los commits
       - name: Configurar Git
